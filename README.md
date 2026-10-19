@@ -76,6 +76,13 @@ Practiced identifying and resolving:
 - CrashLoopBackOff
 - Readiness probe failures
 
+### Kibana Application Operations Dashboard
+
+This dashboard demonstrates centralized Kubernetes logging,
+payment-processing monitoring, and incident investigation
+using Elasticsearch, Elastic Agent, and Kibana.
+<img width="1908" height="927" alt="Dashboard" src="https://github.com/user-attachments/assets/b18e18c5-ed56-4016-a8cf-cb78e4bed5f7" />
+
 ## Repository Structure
 
 ```text
