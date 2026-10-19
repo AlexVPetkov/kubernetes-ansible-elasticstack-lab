@@ -1,0 +1,64 @@
+
+apiVersion: agent.k8s.elastic.co/v1alpha1
+kind: Agent
+metadata:
+  name: banking-logs-agent
+  namespace: elastic-system
+spec:
+  version: 9.2.3
+  elasticsearchRefs:
+    - name: banking-elasticsearch
+
+  daemonSet:
+    podTemplate:
+      spec:
+        securityContext:
+          runAsUser: 0
+        containers:
+          - name: agent
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                memory: 1Gi
+            volumeMounts:
+              - name: dockercontainers
+                mountPath: /var/lib/docker/containers
+                readOnly: true
+              - name: varlogcontainers
+                mountPath: /var/log/containers
+                readOnly: true
+              - name: varlogpods
+                mountPath: /var/log/pods
+                readOnly: true
+        volumes:
+          - name: dockercontainers
+            hostPath:
+              path: /var/lib/docker/containers
+              type: Directory
+          - name: varlogcontainers
+            hostPath:
+              path: /var/log/containers
+          - name: varlogpods
+            hostPath:
+              path: /var/log/pods
+
+  config:
+    inputs:
+      - id: banking-container-logs
+        name: banking-container-logs
+        type: filestream
+        use_output: default
+        data_stream:
+          namespace: banking
+        streams:
+          - id: banking-container-stream
+            data_stream:
+              type: logs
+              dataset: banking.container
+            paths:
+              - /var/log/containers/*_banking-lab_*.log
+            prospector.scanner.symlinks: true
+            parsers:
+              - container: ~

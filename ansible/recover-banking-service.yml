@@ -1,0 +1,94 @@
+
+---
+- name: Controlled banking application recovery
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    k8s_namespace: banking-lab
+    deployment_name: banking-readiness-demo
+    expected_replicas: 1
+    approve_recovery: false
+
+  tasks:
+    - name: Verify correct Kubernetes context
+      ansible.builtin.command:
+        argv:
+          - kubectl
+          - config
+          - current-context
+      register: cluster_context
+      changed_when: false
+
+    - name: Ensure this is our Docker Desktop lab
+      ansible.builtin.assert:
+        that:
+          - cluster_context.stdout == "docker-desktop"
+        fail_msg: "Wrong cluster! Recovery cancelled."
+
+    - name: Retrieve Deployment information
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        name: "{{ deployment_name }}"
+        namespace: "{{ k8s_namespace }}"
+      register: deployment_info
+
+    - name: Verify Deployment exists
+      ansible.builtin.assert:
+        that:
+          - deployment_info.resources | length == 1
+        fail_msg: "Deployment not found. Recovery cancelled."
+
+    - name: Record current replica count
+      ansible.builtin.set_fact:
+        current_replicas: >-
+          {{ deployment_info.resources[0].spec.replicas | int }}
+
+    - name: Display recovery assessment
+      ansible.builtin.debug:
+        msg:
+          - "Deployment: {{ deployment_name }}"
+          - "Current replicas: {{ current_replicas }}"
+          - "Expected replicas: {{ expected_replicas }}"
+          - "Recovery approved: {{ approve_recovery }}"
+
+    - name: Require explicit recovery authorization
+      ansible.builtin.assert:
+        that:
+          - approve_recovery | bool
+        fail_msg: "DRY RUN: Recovery not approved. No changes made."
+      when: current_replicas | int != expected_replicas | int
+
+    - name: Restore application replica count
+      kubernetes.core.k8s_scale:
+        api_version: apps/v1
+        kind: Deployment
+        name: "{{ deployment_name }}"
+        namespace: "{{ k8s_namespace }}"
+        current_replicas: "{{ current_replicas | int }}"
+        replicas: "{{ expected_replicas | int }}"
+        wait: true
+        wait_timeout: 120
+      when: current_replicas | int != expected_replicas | int
+
+    - name: Retrieve updated Deployment information
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        name: "{{ deployment_name }}"
+        namespace: "{{ k8s_namespace }}"
+      register: updated_deployment
+
+    - name: Verify recovery
+      ansible.builtin.assert:
+        that:
+          - >
+            (updated_deployment.resources[0].spec.replicas
+            | int) == (expected_replicas | int)
+          - >
+            (updated_deployment.resources[0].status.availableReplicas
+            | default(0) | int) == (expected_replicas | int)
+        success_msg: "Deployment has the expected available replicas."
+        fail_msg: "Deployment is still unhealthy. Investigate manually."

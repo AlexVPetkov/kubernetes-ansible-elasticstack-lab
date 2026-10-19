@@ -1,0 +1,8 @@
+
+---
+- name: Banking infrastructure validation
+  hosts: kubernetes_control
+  gather_facts: false
+
+  roles:
+    - banking_health_check

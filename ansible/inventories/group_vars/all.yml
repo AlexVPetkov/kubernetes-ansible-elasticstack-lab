@@ -1,0 +1,13 @@
+
+---
+banking_namespace: banking-lab
+
+banking_applications:
+  - name: banking-web
+    expected_replicas: 2
+
+  - name: banking-payment-worker
+    expected_replicas: 1
+
+  - name: banking-readiness-demo
+    expected_replicas: 1

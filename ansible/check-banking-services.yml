@@ -1,0 +1,47 @@
+
+---
+- name: Validate banking application health
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    k8s_namespace: banking-lab
+    applications:
+      banking-web: 2
+      banking-payment-worker: 1
+      banking-readiness-demo: 1
+
+  tasks:
+    - name: Collect Deployment information
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        name: "{{ item.key }}"
+        namespace: "{{ k8s_namespace }}"
+      loop: "{{ applications | dict2items }}"
+      register: deployment_results
+
+    - name: Verify each Deployment exists
+      ansible.builtin.assert:
+        that:
+          - item.resources | length == 1
+        fail_msg: "Deployment {{ item.item.key }} not found!"
+      loop: "{{ deployment_results.results }}"
+      loop_control:
+        label: "{{ item.item.key }}"
+
+    - name: Validate desired and available replicas
+      ansible.builtin.assert:
+        that:
+          - >
+            (item.resources[0].spec.replicas | int)
+            == (item.item.value | int)
+          - >
+            (item.resources[0].status.availableReplicas
+            | default(0) | int) == (item.item.value | int)
+        fail_msg: "{{ item.item.key }} failed health check!"
+        success_msg: "{{ item.item.key }} is healthy."
+      loop: "{{ deployment_results.results }}"
+      loop_control:
+        label: "{{ item.item.key }}"

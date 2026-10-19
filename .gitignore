@@ -1,0 +1,54 @@
+
+# Credentials and private keys
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.kubeconfig
+kubeconfig
+kubeconfig.*
+*.tfstate
+*.tfstate.*
+credentials
+credentials.json
+secrets.yaml
+secrets.yml
+*secret*.json
+
+# Kubernetes local credentials
+.kube/
+**/.kube/
+
+# Ansible sensitive files
+*.vault
+*.vault.yml
+*.vault.yaml
+*.retry
+
+# Python environments and caches
+.venv/
+venv/
+ansible-env/
+__pycache__/
+*.pyc
+
+# Elastic Agent backups
+elastic/backups/
+
+# Temporary logs and reports
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+ansible/reports/
+
+# Editor and operating system
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

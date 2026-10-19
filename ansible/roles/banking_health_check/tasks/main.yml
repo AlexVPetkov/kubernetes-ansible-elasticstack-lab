@@ -1,0 +1,57 @@
+
+---
+- name: Verify target is our local lab
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - config
+      - current-context
+  register: current_cluster
+  changed_when: false
+
+- name: Confirm correct Kubernetes context
+  ansible.builtin.assert:
+    that:
+      - current_cluster.stdout == "docker-desktop"
+    fail_msg: "Wrong Kubernetes context! Stopping."
+
+- name: Retrieve banking Deployments
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    namespace: "{{ banking_namespace }}"
+    name: "{{ item.name }}"
+  loop: "{{ banking_applications }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: banking_deployments
+
+- name: Verify each Deployment exists
+  ansible.builtin.assert:
+    that:
+      - item.resources | length == 1
+    fail_msg: "{{ item.item.name }} does not exist!"
+  loop: "{{ banking_deployments.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: Validate banking Deployment replicas
+  ansible.builtin.assert:
+    that:
+      - >
+        (item.resources[0].spec.replicas | int)
+        == (item.item.expected_replicas | int)
+      - >
+        (item.resources[0].status.availableReplicas
+        | default(0) | int)
+        == (item.item.expected_replicas | int)
+      - >
+        (item.resources[0].status.updatedReplicas
+        | default(0) | int)
+        == (item.item.expected_replicas | int)
+    success_msg: "{{ item.item.name }} is healthy."
+    fail_msg: "{{ item.item.name }} failed validation!"
+  loop: "{{ banking_deployments.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+

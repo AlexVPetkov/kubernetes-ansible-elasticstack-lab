@@ -1,0 +1,43 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: banking-log-generator
+  namespace: banking-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: banking-log-generator
+  template:
+    metadata:
+      labels:
+        app: banking-log-generator
+    spec:
+      containers:
+        - name: log-generator
+          image: busybox:1.36
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - |
+              counter=0
+              while true; do
+                counter=$((counter + 1))
+                timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+                if [ $((counter % 5)) -eq 0 ]; then
+                  echo "$timestamp ERROR payment-worker payment_processing_failed transaction=SIMULATED-$counter"
+                else
+                  echo "$timestamp INFO payment-worker transaction_processed transaction=SIMULATED-$counter"
+                fi
+
+                sleep 3
+              done
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              memory: 64Mi

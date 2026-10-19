@@ -1,0 +1,42 @@
+            
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: banking-payment-worker
+  namespace: banking-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: banking-payment-worker
+  template:
+    metadata:
+      labels:
+        app: banking-payment-worker
+    spec:
+      containers:
+        - name: payment-worker
+          image: busybox:1.36
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - |
+              echo "Starting banking payment worker..."
+
+              if [ -z "$PAYMENT_API_URL" ]; then
+                echo "ERROR: PAYMENT_API_URL is missing."
+                exit 1
+              fi
+
+              echo "Configuration validated."
+              echo "Payment API: $PAYMENT_API_URL"
+              echo "Payment worker running."
+
+              while true; do
+                sleep 30
+              done
+          envFrom:
+            - configMapRef:
+                name: payment-worker-config
+
